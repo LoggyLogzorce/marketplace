@@ -1,0 +1,32 @@
+server:
+  timeout: 10
+  port: "8080"
+
+handlers:
+  LoginPage:
+    url: "login"
+    method: "GET"
+  HomePage:
+    url: ""
+    method: "GET"
+  AuthPage:
+    url: "auth"
+    method: "POST"
+  Auth:
+    url: "auth"
+    method: "GET"
+
+api:
+
+accessExceptions:
+  list:
+    - HomePage
+    - LoginPage
+
+db:
+  host_db: "localhost"
+  port_db: "5432"
+  user: "postgres"
+  password: "1234"
+  dbname: "marketplace"
+  sslmode: "disable"
