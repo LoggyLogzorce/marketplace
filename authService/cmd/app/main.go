@@ -2,6 +2,7 @@ package main
 
 import (
 	"authService/internal/configs"
+	"authService/internal/db"
 	"authService/internal/handlers"
 	"log"
 	"net/http"
@@ -21,6 +22,9 @@ func main() {
 		WriteTimeout: cfg.Timeout * time.Second,
 		ReadTimeout:  cfg.Timeout * time.Second,
 	}
+
+	db.Connect()
+	db.Migrate()
 
 	log.Println("Listening " + cfg.Port)
 	if err := server.ListenAndServe(); err != nil {

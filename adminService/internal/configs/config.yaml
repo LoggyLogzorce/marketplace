@@ -9,14 +9,11 @@ handlers:
   HomePage:
     url: ""
     method: "GET"
-  AuthPage:
-    url: "auth"
-    method: "POST"
-  Auth:
-    url: "auth"
-    method: "GET"
 
 api:
+  Auth:
+    url: "api/auth/admin"
+    method: "POST"
 
 accessExceptions:
   list:

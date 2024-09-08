@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"adminService/internal/api"
 	"adminService/internal/configs"
 	"adminService/internal/context"
 	"adminService/internal/user"
@@ -11,18 +12,14 @@ import (
 )
 
 var types map[string]bool
-var hdl *user.Handler
+
+var uHdl *user.Handler
 var urlMap map[string]map[string]reflect.Value
 
-func init() {
-	cfg := configs.Get()
-	urlMap = make(map[string]map[string]reflect.Value)
-	urlMap["POST"] = make(map[string]reflect.Value)
-	urlMap["PUT"] = make(map[string]reflect.Value)
-	urlMap["DELETE"] = make(map[string]reflect.Value)
-	urlMap["GET"] = make(map[string]reflect.Value)
+var apiHdl *api.Handler
+var apiMap map[string]map[string]reflect.Value
 
-	maps := cfg.Handlers
+func init() {
 	types = make(map[string]bool)
 	types[".css"] = true
 	types[".js"] = true
@@ -30,19 +27,48 @@ func init() {
 	types[".jpg"] = true
 	types[".png"] = true
 
-	hdl = &user.Handler{}
-	_struct := reflect.TypeOf(hdl)
+	cfg := configs.Get()
+	urlMap = make(map[string]map[string]reflect.Value)
+	urlMap["POST"] = make(map[string]reflect.Value)
+	urlMap["PUT"] = make(map[string]reflect.Value)
+	urlMap["DELETE"] = make(map[string]reflect.Value)
+	urlMap["GET"] = make(map[string]reflect.Value)
 
-	for methodNum := 0; methodNum < _struct.NumMethod(); methodNum++ {
-		method := _struct.Method(methodNum)
-		val, ok := maps[method.Name]
+	apiMap = make(map[string]map[string]reflect.Value)
+	apiMap["POST"] = make(map[string]reflect.Value)
+	apiMap["PUT"] = make(map[string]reflect.Value)
+	apiMap["DELETE"] = make(map[string]reflect.Value)
+	apiMap["GET"] = make(map[string]reflect.Value)
+
+	mapsHdl := cfg.Handlers
+	mapsApi := cfg.Api
+
+	uHdl = &user.Handler{}
+	apiHdl = &api.Handler{}
+	structHdl := reflect.TypeOf(uHdl)
+	structApi := reflect.TypeOf(apiHdl)
+
+	for methodNum := 0; methodNum < structHdl.NumMethod(); methodNum++ {
+		method := structHdl.Method(methodNum)
+		val, ok := mapsHdl[method.Name]
 		if !ok {
 			continue
 		}
 
-		urlMap[val.Method][val.Url] = reflect.ValueOf(hdl).MethodByName(method.Name)
+		urlMap[val.Method][val.Url] = reflect.ValueOf(uHdl).MethodByName(method.Name)
 	}
 	log.Println("urlMap has been read")
+
+	for methodNum := 0; methodNum < structApi.NumMethod(); methodNum++ {
+		method := structApi.Method(methodNum)
+		val, ok := mapsApi[method.Name]
+		if !ok {
+			continue
+		}
+
+		apiMap[val.Method][val.Url] = reflect.ValueOf(apiHdl).MethodByName(method.Name)
+	}
+	log.Println("apiMap has been read")
 }
 
 func static(path string) bool {
@@ -62,21 +88,51 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 		Request:  r,
 	}
 
-	methodMap, ok := urlMap[r.Method]
-	if !ok {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+	path := r.URL.Path[1:]
 
 	log.Println("Page:", r.URL.Path)
-	path := r.URL.Path[1:]
-	if ok = static(path); ok {
+	if ok := static(path); ok {
 		http.ServeFile(ctx.Response, ctx.Request, "./internal/static/"+path)
+		return
+	}
+
+	pathArr := strings.Split(path, "/")
+	if pathArr[0] != "api" {
+		UrlHandler(ctx, path)
+		return
+	}
+
+	ApiHandler(ctx, path)
+	return
+}
+
+func UrlHandler(ctx *context.Context, path string) {
+	methodMap, ok := urlMap[ctx.Request.Method]
+	if !ok {
+		http.Error(ctx.Response, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	method, ok := methodMap[path]
 	if !ok {
-		http.Error(w, "Path not found", http.StatusNotFound)
+		http.Error(ctx.Response, "Path not found", http.StatusNotFound)
+		return
+	}
+
+	log.Println("method: ", method)
+	method.Call([]reflect.Value{reflect.ValueOf(ctx)})
+}
+
+func ApiHandler(ctx *context.Context, path string) {
+	methodMap, ok := apiMap[ctx.Request.Method]
+	if !ok {
+		http.Error(ctx.Response, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	method, ok := methodMap[path]
+	if !ok {
+		http.Error(ctx.Response, "Path not found", http.StatusNotFound)
 		return
 	}
 

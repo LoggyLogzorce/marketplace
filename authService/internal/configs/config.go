@@ -12,8 +12,24 @@ type Server struct {
 	Port    string        `yaml:"port"`
 }
 
+type Service struct {
+	Url    string `yaml:"url"`
+	Method string `yaml:"method"`
+}
+
+type DataBase struct {
+	HostDb   string `yaml:"host_db"`
+	PortDb   string `yaml:"port_db"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DbName   string `yaml:"dbname"`
+	SslMode  string `yaml:"sslmode"`
+}
+
 type Config struct {
-	Server `yaml:"server"`
+	Server   `yaml:"server"`
+	ApiMap   map[string]Service `yaml:"apiMap"`
+	DataBase `yaml:"db"`
 }
 
 var config Config
